@@ -1,0 +1,46 @@
+name: Daily News
+
+on:
+  schedule:
+    # UTC 22:00 = 北京时间次日 06:00。GitHub 定时有几分钟~几十分钟延迟，属正常。
+    - cron: "0 22 * * *"
+  workflow_dispatch: {}   # 允许在 Actions 页面手动点一下立即跑
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个，避免重复部署
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install feedparser deep-translator
+
+      - name: Build site
+        run: python build.py
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

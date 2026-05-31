@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1117">
+<title>每日新闻</title>
+<style>
+:root{
+  --bg:#0d1117; --card:#161b22; --border:#21262d; --text:#e6edf3;
+  --muted:#8b949e; --link:#58a6ff; --accent:#238636; --orig:#6e7681;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  line-height:1.5;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+header{position:sticky;top:0;z-index:10;background:rgba(13,17,23,.85);
+  backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--border);
+  padding:14px 16px}
+header h1{margin:0;font-size:18px;display:flex;align-items:center;gap:8px}
+header .upd{color:var(--muted);font-size:12px;margin-top:2px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 16px 0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:6px 12px;border:1px solid var(--border);border-radius:999px;
+  color:var(--muted);font-size:13px;background:var(--card);cursor:pointer;white-space:nowrap}
+.tab.active{color:#fff;border-color:var(--accent);background:var(--accent)}
+main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:6px 14px 8px;margin-bottom:14px}
+.card h2{font-size:15px;margin:10px 2px;display:flex;align-items:center;gap:6px}
+.card .count{color:var(--muted);font-size:12px;font-weight:normal;
+  background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:0 8px;margin-left:auto}
+.card ul{list-style:none;margin:0;padding:0}
+.card li{padding:11px 2px;border-top:1px solid var(--border)}
+.card li:first-child{border-top:none}
+.card li a{color:var(--text);text-decoration:none;font-size:15px;display:block}
+.card li a:active{color:var(--link)}
+.orig{color:var(--orig);font-size:12.5px;margin-top:3px}
+.meta{color:var(--muted);font-size:12px;margin-top:5px}
+.src{color:var(--link)}
+.empty{color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:20px}
+@media(prefers-color-scheme:light){
+  :root{--bg:#f6f8fa;--card:#fff;--border:#d0d7de;--text:#1f2328;--muted:#656d76;--orig:#8c959f}
+  header{background:rgba(246,248,250,.85)}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>📰 每日新闻</h1>
+  <div class="upd">更新于 2026-05-31 03:48</div>
+</header>
+<div class="tabs" id="tabs"><span class="tab active" data-target="all">全部</span></div>
+<main id="main">
+<section class="card" data-cat="canews">
+      <h2> 加拿大 / 美国 时事 <span class="count">9</span></h2>
+      <ul>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">加央行维持利率，暗示视数据而定</a>
+        <div class="orig">Bank of Canada holds rate, signals data-dependent path</div>
+        <div class="meta"><span class="src">CBC 头条</span> · 05-31 03:28</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">安大略公布 2026 住房新计划</a>
+        <div class="orig">Ontario unveils new housing plan for 2026</div>
+        <div class="meta"><span class="src">CTV News</span> · 05-31 03:08</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">美国国会赶在期限前通过支出法案</a>
+        <div class="orig">US Congress passes spending bill ahead of deadline</div>
+        <div class="meta"><span class="src">CNN 头条</span> · 05-31 02:48</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #1</a>
+        <div class="orig">北美要闻 #1</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #2</a>
+        <div class="orig">北美要闻 #2</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #3</a>
+        <div class="orig">北美要闻 #3</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #4</a>
+        <div class="orig">北美要闻 #4</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 02:43</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #5</a>
+        <div class="orig">北美要闻 #5</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 02:30</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">北美要闻 #6</a>
+        <div class="orig">北美要闻 #6</div>
+        <div class="meta"><span class="src">Global News</span> · 05-31 02:16</div>
+      </li>
+      </ul>
+    </section>
+<section class="card" data-cat="finance">
+      <h2> 财经 / 股市 (加美) <span class="count">8</span></h2>
+      <ul>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">能源与银行股领涨，TSX 走高</a>
+        <div class="orig">TSX climbs as energy and bank stocks lead</div>
+        <div class="meta"><span class="src">Financial Post</span> · 05-31 03:31</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">科技股拉动，标普 500 创新高</a>
+        <div class="orig">S&amp;P 500 hits record as tech rallies</div>
+        <div class="meta"><span class="src">CNBC 市场</span> · 05-31 03:11</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #1</a>
+        <div class="orig">市场动态 #1</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #2</a>
+        <div class="orig">市场动态 #2</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #3</a>
+        <div class="orig">市场动态 #3</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #4</a>
+        <div class="orig">市场动态 #4</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 02:43</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #5</a>
+        <div class="orig">市场动态 #5</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 02:30</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">市场动态 #6</a>
+        <div class="orig">市场动态 #6</div>
+        <div class="meta"><span class="src">BNN Bloomberg</span> · 05-31 02:16</div>
+      </li>
+      </ul>
+    </section>
+<section class="card" data-cat="invest">
+      <h2> 投资前瞻 / 选股研报 (加美) <span class="count">8</span></h2>
+      <ul>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">财报季前值得布局的 3 只 TSX 股票</a>
+        <div class="orig">3 TSX stocks to buy before earnings season</div>
+        <div class="meta"><span class="src">Motley Fool 加拿大</span> · 05-31 03:33</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">为何这只 AI 芯片股一年内或翻倍</a>
+        <div class="orig">Why this AI chip name could double in 12 months</div>
+        <div class="meta"><span class="src">Seeking Alpha</span> · 05-31 03:18</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">本周 5 只强烈买入评级个股</a>
+        <div class="orig">Zacks Rank #1: 5 strong-buy names this week</div>
+        <div class="meta"><span class="src">Zacks 选股</span> · 05-31 02:58</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">巴伦周刊：专业投资者当下加仓方向</a>
+        <div class="orig">Barron&#x27;s: where pros are putting money now</div>
+        <div class="meta"><span class="src">Barron&#x27;s</span> · 05-31 02:38</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">分析师观点 #1</a>
+        <div class="orig">分析师观点 #1</div>
+        <div class="meta"><span class="src">Motley Fool (US)</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">分析师观点 #2</a>
+        <div class="orig">分析师观点 #2</div>
+        <div class="meta"><span class="src">Motley Fool (US)</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">分析师观点 #3</a>
+        <div class="orig">分析师观点 #3</div>
+        <div class="meta"><span class="src">Motley Fool (US)</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">分析师观点 #4</a>
+        <div class="orig">分析师观点 #4</div>
+        <div class="meta"><span class="src">Motley Fool (US)</span> · 05-31 02:43</div>
+      </li>
+      </ul>
+    </section>
+<section class="card" data-cat="tech">
+      <h2> 科技 / AI <span class="count">10</span></h2>
+      <ul>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #1</a>
+        <div class="orig">AI 行业动态 #1</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #2</a>
+        <div class="orig">AI 行业动态 #2</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #3</a>
+        <div class="orig">AI 行业动态 #3</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #4</a>
+        <div class="orig">AI 行业动态 #4</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 02:43</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #5</a>
+        <div class="orig">AI 行业动态 #5</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 02:30</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">AI 行业动态 #6</a>
+        <div class="orig">AI 行业动态 #6</div>
+        <div class="meta"><span class="src">TechCrunch</span> · 05-31 02:16</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">国产科技 #1</a>
+        
+        <div class="meta"><span class="src">36氪</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">国产科技 #2</a>
+        
+        <div class="meta"><span class="src">36氪</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">国产科技 #3</a>
+        
+        <div class="meta"><span class="src">36氪</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">国产科技 #4</a>
+        
+        <div class="meta"><span class="src">36氪</span> · 05-31 02:43</div>
+      </li>
+      </ul>
+    </section>
+<section class="card" data-cat="dev">
+      <h2> 开发者 / 极客 <span class="count">10</span></h2>
+      <ul>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #1</a>
+        <div class="orig">Show HN 项目 #1</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #2</a>
+        <div class="orig">Show HN 项目 #2</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #3</a>
+        <div class="orig">Show HN 项目 #3</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #4</a>
+        <div class="orig">Show HN 项目 #4</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 02:43</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #5</a>
+        <div class="orig">Show HN 项目 #5</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 02:30</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">Show HN 项目 #6</a>
+        <div class="orig">Show HN 项目 #6</div>
+        <div class="meta"><span class="src">Hacker News</span> · 05-31 02:16</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">技术讨论 #1</a>
+        
+        <div class="meta"><span class="src">V2EX</span> · 05-31 03:23</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">技术讨论 #2</a>
+        
+        <div class="meta"><span class="src">V2EX</span> · 05-31 03:10</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">技术讨论 #3</a>
+        
+        <div class="meta"><span class="src">V2EX</span> · 05-31 02:56</div>
+      </li>
+<li>
+        <a href="https://example.com" target="_blank" rel="noopener">技术讨论 #4</a>
+        
+        <div class="meta"><span class="src">V2EX</span> · 05-31 02:43</div>
+      </li>
+      </ul>
+    </section>
+</main>
+<footer>自动更新 · GitHub Actions + Pages</footer>
+<script>
+// 生成分类筛选 tab
+const tabs=document.getElementById('tabs');
+document.querySelectorAll('.card').forEach(c=>{
+  const h=c.querySelector('h2').textContent.replace(/\s*\d+\s*$/,'').trim();
+  const t=document.createElement('span');
+  t.className='tab';t.dataset.target=c.dataset.cat;t.textContent=h;
+  tabs.appendChild(t);
+});
+tabs.addEventListener('click',e=>{
+  const tab=e.target.closest('.tab');if(!tab)return;
+  tabs.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  tab.classList.add('active');
+  const tgt=tab.dataset.target;
+  document.querySelectorAll('.card').forEach(c=>{
+    c.style.display=(tgt==='all'||c.dataset.cat===tgt)?'':'none';
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+</script>
+</body>
+</html>

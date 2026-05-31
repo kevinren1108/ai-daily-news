@@ -1,0 +1,83 @@
+{
+  "_comment": "新闻源配置。lang: zh=中文(不翻译)/en=英文(标题翻成中文)。地域重点:加拿大+美国。抓取在 GitHub 海外服务器跑,墙不影响。死源自动跳过,可多放。加/删直接改这里。",
+  "categories": [
+    {
+      "id": "canews",
+      "name": "加拿大 / 美国 时事",
+      "feeds": [
+        { "name": "CBC 头条", "url": "https://www.cbc.ca/webfeed/rss/rss-topstories", "lang": "en" },
+        { "name": "CBC 加拿大", "url": "https://www.cbc.ca/webfeed/rss/rss-canada", "lang": "en" },
+        { "name": "CTV News", "url": "https://www.ctvnews.ca/rss/ctvnews-ca-top-stories-public-rss-1.822009", "lang": "en" },
+        { "name": "Global News", "url": "https://globalnews.ca/feed/", "lang": "en" },
+        { "name": "Toronto Star", "url": "https://www.thestar.com/search/?f=rss&t=article&c=news*&l=50&s=start_time&sd=desc", "lang": "en" },
+        { "name": "CNN 头条", "url": "http://rss.cnn.com/rss/cnn_topstories.rss", "lang": "en" },
+        { "name": "NPR News", "url": "https://feeds.npr.org/1001/rss.xml", "lang": "en" },
+        { "name": "NYT 美国", "url": "https://rss.nytimes.com/services/xml/rss/nyt/US.xml", "lang": "en" },
+        { "name": "AP Top", "url": "https://feeds.apnews.com/rss/apf-topnews", "lang": "en" }
+      ]
+    },
+    {
+      "id": "finance",
+      "name": "财经 / 股市 (加美)",
+      "feeds": [
+        { "name": "Financial Post", "url": "https://financialpost.com/feed", "lang": "en" },
+        { "name": "BNN Bloomberg", "url": "https://www.bnnbloomberg.ca/home/rss", "lang": "en" },
+        { "name": "Globe&Mail 投资", "url": "https://www.theglobeandmail.com/investing/?service=rss", "lang": "en" },
+        { "name": "CNBC 市场", "url": "https://www.cnbc.com/id/20910258/device/rss/rss.html", "lang": "en" },
+        { "name": "CNBC 财经", "url": "https://www.cnbc.com/id/100003114/device/rss/rss.html", "lang": "en" },
+        { "name": "MarketWatch", "url": "http://feeds.marketwatch.com/marketwatch/topstories/", "lang": "en" },
+        { "name": "Yahoo Finance", "url": "https://finance.yahoo.com/news/rssindex", "lang": "en" },
+        { "name": "Reuters 商业", "url": "https://feeds.reuters.com/reuters/businessNews", "lang": "en" },
+        { "name": "华尔街见闻", "url": "https://dedicated.wallstreetcn.com/rss.xml", "lang": "zh" }
+      ]
+    },
+    {
+      "id": "invest",
+      "name": "投资前瞻 / 选股研报 (加美)",
+      "feeds": [
+        { "name": "Seeking Alpha", "url": "https://seekingalpha.com/feed.xml", "lang": "en" },
+        { "name": "Seeking Alpha 市场", "url": "https://seekingalpha.com/market_currents.xml", "lang": "en" },
+        { "name": "Motley Fool (US)", "url": "https://www.fool.com/feeds/index.aspx", "lang": "en" },
+        { "name": "Motley Fool 加拿大", "url": "https://www.fool.ca/feed/", "lang": "en" },
+        { "name": "CNBC 投资", "url": "https://www.cnbc.com/id/100727362/device/rss/rss.html", "lang": "en" },
+        { "name": "MarketWatch 观点", "url": "http://feeds.marketwatch.com/marketwatch/marketpulse/", "lang": "en" },
+        { "name": "Investing 分析", "url": "https://www.investing.com/rss/news_25.rss", "lang": "en" },
+        { "name": "Zacks 选股", "url": "https://www.zacks.com/rss/rss_news.php", "lang": "en" },
+        { "name": "Barron's", "url": "https://www.barrons.com/feed/rssfeed", "lang": "en" }
+      ]
+    },
+    {
+      "id": "tech",
+      "name": "科技 / AI",
+      "feeds": [
+        { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "lang": "en" },
+        { "name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "lang": "en" },
+        { "name": "Engadget", "url": "https://www.engadget.com/rss.xml", "lang": "en" },
+        { "name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index", "lang": "en" },
+        { "name": "VentureBeat AI", "url": "https://venturebeat.com/category/ai/feed/", "lang": "en" },
+        { "name": "MIT Tech Review", "url": "https://www.technologyreview.com/feed/", "lang": "en" },
+        { "name": "36氪", "url": "https://www.36kr.com/feed", "lang": "zh" },
+        { "name": "机器之心", "url": "https://www.jiqizhixin.com/rss", "lang": "zh" }
+      ]
+    },
+    {
+      "id": "dev",
+      "name": "开发者 / 极客",
+      "feeds": [
+        { "name": "Hacker News", "url": "https://hnrss.org/frontpage", "lang": "en" },
+        { "name": "Hacker News Best", "url": "https://hnrss.org/best", "lang": "en" },
+        { "name": "GitHub Trending", "url": "https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml", "lang": "en" },
+        { "name": "Dev.to", "url": "https://dev.to/feed", "lang": "en" },
+        { "name": "Lobsters", "url": "https://lobste.rs/rss", "lang": "en" },
+        { "name": "V2EX", "url": "https://www.v2ex.com/index.xml", "lang": "zh" },
+        { "name": "阮一峰周刊", "url": "https://feeds.feedburner.com/ruanyifeng", "lang": "zh" }
+      ]
+    }
+  ],
+  "settings": {
+    "max_per_feed": 12,
+    "max_per_category": 45,
+    "translate_en_titles": true,
+    "timezone": "America/Toronto"
+  }
+}

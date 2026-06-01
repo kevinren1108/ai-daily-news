@@ -70,24 +70,32 @@ def fetch_feed(feed):
                     except Exception:
                         ts = None
                     break
+            # 摘要：很多 RSS 自带正文片段，用来在页面上直接阅读
+            summary = clean(getattr(e, "summary", "") or getattr(e, "description", ""))
+            if summary == title:
+                summary = ""
+            if len(summary) > 600:
+                summary = summary[:600].rstrip() + "…"
             items.append({
                 "title": title,
                 "link": link,
                 "source": feed["name"],
                 "lang": feed.get("lang", "en"),
                 "ts": ts or 0,
+                "summary": summary,
             })
     except Exception as ex:
         print(f"  [warn] {feed['name']} 抓取失败: {ex}")
     return items
 
 
-def translate_titles(titles):
-    """批量把英文标题翻成中文。返回 {原文: 译文}。"""
+def translate_texts(texts):
+    """批量把英文文本（标题/摘要）翻成中文。返回 {原文: 译文}。"""
     result = {}
-    if not (_HAS_TRANSLATOR and titles):
+    texts = [t for t in texts if t]
+    if not (_HAS_TRANSLATOR and texts):
         return result
-    uniq = list({t for t in titles})
+    uniq = list({t for t in texts})
     try:
         translator = GoogleTranslator(source="auto", target="zh-CN")
         # deep-translator 支持 batch
@@ -113,7 +121,7 @@ def build():
     do_translate = settings.get("translate_en_titles", True)
 
     categories_out = []
-    all_en_titles = []
+    all_en_texts = []
 
     for cat in cfg["categories"]:
         print(f"[分类] {cat['name']}")
@@ -144,19 +152,25 @@ def build():
         deduped = deduped[:max_cat]
         for it in deduped:
             if it["lang"] == "en":
-                all_en_titles.append(it["title"])
+                all_en_texts.append(it["title"])
+                if it.get("summary"):
+                    all_en_texts.append(it["summary"])
         categories_out.append({"meta": cat, "items": deduped})
 
-    # 翻译
-    trans_map = translate_titles(all_en_titles) if do_translate else {}
-    print(f"[翻译] 完成 {len(trans_map)} 条英文标题")
+    # 翻译（标题 + 摘要）
+    trans_map = translate_texts(all_en_texts) if do_translate else {}
+    print(f"[翻译] 完成 {len(trans_map)} 段英文文本（标题+摘要）")
 
     for cat in categories_out:
         for it in cat["items"]:
             if it["lang"] == "en":
                 it["zh"] = trans_map.get(it["title"], "")
+                # 英文摘要翻成中文；翻译失败就留空（不显示英文）
+                it["zh_summary"] = trans_map.get(it.get("summary", ""), "") if it.get("summary") else ""
             else:
+                # 中文源：标题原样，摘要本身就是中文，直接显示
                 it["zh"] = ""
+                it["zh_summary"] = it.get("summary", "")
 
     render(categories_out, settings)
 
@@ -191,9 +205,17 @@ def render(categories, settings):
             else:
                 main = html.escape(it["title"])
                 sub = ""
+            # 中文摘要：在页面上直接展开阅读，不用跳转
+            zh_sum = it.get("zh_summary", "")
+            if zh_sum:
+                read = (f'<details class="read"><summary>阅读摘要</summary>'
+                        f'<div class="readbody">{html.escape(zh_sum)}</div></details>')
+            else:
+                read = ""
             rows.append(f'''<li>
         <a href="{html.escape(it['link'])}" target="_blank" rel="noopener">{main}</a>
         {sub}
+        {read}
         <div class="meta"><span class="src">{html.escape(it['source'])}</span>{(' · ' + t) if t else ''}</div>
       </li>''')
         items_html = "\n".join(rows) if rows else '<li class="empty">暂无内容</li>'
@@ -253,6 +275,15 @@ main{padding:12px 16px 40px;max-width:720px;margin:0 auto}
 .card li a{color:var(--text);text-decoration:none;font-size:15px;display:block}
 .card li a:active{color:var(--link)}
 .orig{color:var(--orig);font-size:12.5px;margin-top:3px}
+.read{margin-top:6px}
+.read>summary{color:var(--link);font-size:12.5px;cursor:pointer;list-style:none;
+  display:inline-flex;align-items:center;gap:4px;user-select:none}
+.read>summary::-webkit-details-marker{display:none}
+.read>summary::before{content:"▸";font-size:10px;transition:transform .15s}
+.read[open]>summary::before{transform:rotate(90deg)}
+.readbody{color:var(--text);font-size:13.5px;line-height:1.6;margin-top:6px;
+  padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;
+  white-space:pre-wrap;word-break:break-word}
 .meta{color:var(--muted);font-size:12px;margin-top:5px}
 .src{color:var(--link)}
 .empty{color:var(--muted)}

@@ -12,6 +12,7 @@ import json
 import html
 import time
 import hashlib
+import urllib.request
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -113,6 +114,64 @@ def translate_texts(texts):
     return result
 
 
+def ai_summarize(items, settings):
+    """用 Gemini 给英文新闻做「翻译标题 + 中文摘要」。
+    直接写回 it['zh'] 和 it['zh_summary']；没 key / 出错的条目保持空，交给 Google 翻译兜底。
+    """
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key or not items:
+        if not key:
+            print("  [AI] 未配置 GEMINI_API_KEY，跳过 AI，使用免费翻译兜底")
+        return
+    model = os.environ.get("GEMINI_MODEL") or settings.get("ai_model", "gemini-2.0-flash")
+    batch = int(settings.get("ai_batch", 15))
+    sleep_s = float(settings.get("ai_sleep", 4))   # 免费档约 15 RPM，批间稍歇避免限流
+    url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+           f"{model}:generateContent?key={key}")
+    sys_prompt = (
+        "你是专业的中文新闻编辑。下面给你若干条英文新闻，每条含标题(title)和摘要(summary)。\n"
+        "为每条生成：\n"
+        "1) zh_title：把标题翻成通顺、准确、像中文新闻标题的中文（不超过40字）。\n"
+        "2) zh_summary：用2-3句通顺中文概括新闻要点，突出关键事实(人物/数字/结论)，"
+        "客观陈述、不要编造、不加评论；若 summary 为空则根据标题写一句话概括。\n"
+        "严格只输出一个 JSON 数组，每个元素形如 "
+        "{\"i\":序号,\"zh_title\":\"...\",\"zh_summary\":\"...\"}，不要任何额外文字。\n\n"
+        "新闻列表：\n"
+    )
+    done = 0
+    for start in range(0, len(items), batch):
+        chunk = items[start:start + batch]
+        payload = [{"i": idx, "title": it["title"], "summary": it.get("summary", "")}
+                   for idx, it in enumerate(chunk)]
+        body = {
+            "contents": [{"parts": [{"text": sys_prompt + json.dumps(payload, ensure_ascii=False)}]}],
+            "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
+        }
+        try:
+            req = urllib.request.Request(
+                url, data=json.dumps(body).encode("utf-8"),
+                headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+            text = data["candidates"][0]["content"]["parts"][0]["text"]
+            for el in json.loads(text):
+                j = el.get("i")
+                if isinstance(j, int) and 0 <= j < len(chunk):
+                    zt = (el.get("zh_title") or "").strip()
+                    zs = (el.get("zh_summary") or "").strip()
+                    if zt:
+                        chunk[j]["zh"] = zt
+                    if zs:
+                        chunk[j]["zh_summary"] = zs
+                        done += 1
+            print(f"  [AI] 批 {start // batch + 1}: 处理 {len(chunk)} 条")
+        except Exception as ex:
+            print(f"  [warn] AI 批次失败({start // batch + 1}): {ex}")
+        if start + batch < len(items):
+            time.sleep(sleep_s)
+    print(f"  [AI] 完成，生成中文摘要 {done} 条")
+
+
 def build():
     cfg = load_config()
     settings = cfg.get("settings", {})
@@ -121,7 +180,6 @@ def build():
     do_translate = settings.get("translate_en_titles", True)
 
     categories_out = []
-    all_en_texts = []
 
     for cat in cfg["categories"]:
         print(f"[分类] {cat['name']}")
@@ -150,27 +208,33 @@ def build():
 
         deduped.sort(key=lambda x: x["ts"], reverse=True)
         deduped = deduped[:max_cat]
-        for it in deduped:
-            if it["lang"] == "en":
-                all_en_texts.append(it["title"])
-                if it.get("summary"):
-                    all_en_texts.append(it["summary"])
         categories_out.append({"meta": cat, "items": deduped})
 
-    # 翻译（标题 + 摘要）
-    trans_map = translate_texts(all_en_texts) if do_translate else {}
-    print(f"[翻译] 完成 {len(trans_map)} 段英文文本（标题+摘要）")
-
+    # 中文源：标题原样，摘要本身就是中文，直接显示
     for cat in categories_out:
         for it in cat["items"]:
-            if it["lang"] == "en":
-                it["zh"] = trans_map.get(it["title"], "")
-                # 英文摘要翻成中文；翻译失败就留空（不显示英文）
-                it["zh_summary"] = trans_map.get(it.get("summary", ""), "") if it.get("summary") else ""
-            else:
-                # 中文源：标题原样，摘要本身就是中文，直接显示
+            if it["lang"] != "en":
                 it["zh"] = ""
                 it["zh_summary"] = it.get("summary", "")
+
+    # 英文源：先用 AI（Gemini）翻译标题 + 浓缩中文摘要
+    en_items = [it for cat in categories_out for it in cat["items"] if it["lang"] == "en"]
+    for it in en_items:
+        it.setdefault("zh", "")
+        it.setdefault("zh_summary", "")
+    if do_translate:
+        ai_summarize(en_items, settings)
+        # AI 没覆盖到的（无 key / 限流 / 失败）回退到免费 Google 翻译，保证不空
+        pending = [it for it in en_items if not it["zh"]]
+        if pending:
+            texts = [it["title"] for it in pending]
+            texts += [it["summary"] for it in pending if it.get("summary")]
+            gmap = translate_texts(texts)
+            for it in pending:
+                it["zh"] = gmap.get(it["title"], "")
+                if it.get("summary") and not it["zh_summary"]:
+                    it["zh_summary"] = gmap.get(it["summary"], "")
+            print(f"[翻译] Google 兜底 {len(pending)} 条")
 
     render(categories_out, settings)
 

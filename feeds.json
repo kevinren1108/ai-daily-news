@@ -83,6 +83,9 @@
     "max_per_feed": 12,
     "max_per_category": 45,
     "translate_en_titles": true,
-    "timezone": "America/Toronto"
+    "timezone": "America/Toronto",
+    "ai_model": "gemini-2.0-flash",
+    "ai_batch": 15,
+    "ai_sleep": 4
   }
 }

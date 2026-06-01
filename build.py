@@ -147,7 +147,12 @@ def ai_summarize(items, settings):
                    for idx, it in enumerate(chunk)]
         body = {
             "contents": [{"parts": [{"text": sys_prompt + json.dumps(payload, ensure_ascii=False)}]}],
-            "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
+            "generationConfig": {
+                "temperature": 0.3,
+                "responseMimeType": "application/json",
+                # 翻译/总结不需要推理，关掉 thinking 省钱提速
+                "thinkingConfig": {"thinkingBudget": int(settings.get("ai_thinking_budget", 0))},
+            },
         }
         bnum = start // batch + 1
         data = None

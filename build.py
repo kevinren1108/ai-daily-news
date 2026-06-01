@@ -197,8 +197,10 @@ def render(categories, settings):
         <div class="meta"><span class="src">{html.escape(it['source'])}</span>{(' · ' + t) if t else ''}</div>
       </li>''')
         items_html = "\n".join(rows) if rows else '<li class="empty">暂无内容</li>'
-        cards.append(f'''<section class="card" data-cat="{meta['id']}">
-      <h2>{meta['emoji']} {html.escape(meta['name'])} <span class="count">{len(cat['items'])}</span></h2>
+        emoji = meta.get('emoji', '')
+        heading = f"{emoji} {html.escape(meta['name'])}".strip()
+        cards.append(f'''<section class="card" data-cat="{meta.get('id', '')}">
+      <h2>{heading} <span class="count">{len(cat['items'])}</span></h2>
       <ul>
 {items_html}
       </ul>

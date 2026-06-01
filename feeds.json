@@ -4,6 +4,7 @@
     {
       "id": "canews",
       "name": "加拿大 / 美国 时事",
+      "emoji": "🍁",
       "feeds": [
         { "name": "CBC 头条", "url": "https://www.cbc.ca/webfeed/rss/rss-topstories", "lang": "en" },
         { "name": "CBC 加拿大", "url": "https://www.cbc.ca/webfeed/rss/rss-canada", "lang": "en" },
@@ -19,6 +20,7 @@
     {
       "id": "finance",
       "name": "财经 / 股市 (加美)",
+      "emoji": "📈",
       "feeds": [
         { "name": "Financial Post", "url": "https://financialpost.com/feed", "lang": "en" },
         { "name": "BNN Bloomberg", "url": "https://www.bnnbloomberg.ca/home/rss", "lang": "en" },
@@ -34,6 +36,7 @@
     {
       "id": "invest",
       "name": "投资前瞻 / 选股研报 (加美)",
+      "emoji": "🔮",
       "feeds": [
         { "name": "Seeking Alpha", "url": "https://seekingalpha.com/feed.xml", "lang": "en" },
         { "name": "Seeking Alpha 市场", "url": "https://seekingalpha.com/market_currents.xml", "lang": "en" },
@@ -49,6 +52,7 @@
     {
       "id": "tech",
       "name": "科技 / AI",
+      "emoji": "🤖",
       "feeds": [
         { "name": "TechCrunch", "url": "https://techcrunch.com/feed/", "lang": "en" },
         { "name": "The Verge", "url": "https://www.theverge.com/rss/index.xml", "lang": "en" },
@@ -63,6 +67,7 @@
     {
       "id": "dev",
       "name": "开发者 / 极客",
+      "emoji": "💻",
       "feeds": [
         { "name": "Hacker News", "url": "https://hnrss.org/frontpage", "lang": "en" },
         { "name": "Hacker News Best", "url": "https://hnrss.org/best", "lang": "en" },

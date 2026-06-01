@@ -13,6 +13,7 @@ import html
 import time
 import hashlib
 import urllib.request
+import urllib.error
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -124,8 +125,9 @@ def ai_summarize(items, settings):
             print("  [AI] 未配置 GEMINI_API_KEY，跳过 AI，使用免费翻译兜底")
         return
     model = os.environ.get("GEMINI_MODEL") or settings.get("ai_model", "gemini-2.0-flash")
-    batch = int(settings.get("ai_batch", 15))
+    batch = int(settings.get("ai_batch", 30))      # 批越大请求越少，越不容易撞限流
     sleep_s = float(settings.get("ai_sleep", 4))   # 免费档约 15 RPM，批间稍歇避免限流
+    max_retry = int(settings.get("ai_retry", 4))   # 429 时指数退避重试
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{model}:generateContent?key={key}")
     sys_prompt = (
@@ -147,26 +149,49 @@ def ai_summarize(items, settings):
             "contents": [{"parts": [{"text": sys_prompt + json.dumps(payload, ensure_ascii=False)}]}],
             "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
         }
-        try:
-            req = urllib.request.Request(
-                url, data=json.dumps(body).encode("utf-8"),
-                headers={"Content-Type": "application/json"}, method="POST")
-            with urllib.request.urlopen(req, timeout=90) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-            text = data["candidates"][0]["content"]["parts"][0]["text"]
-            for el in json.loads(text):
-                j = el.get("i")
-                if isinstance(j, int) and 0 <= j < len(chunk):
-                    zt = (el.get("zh_title") or "").strip()
-                    zs = (el.get("zh_summary") or "").strip()
-                    if zt:
-                        chunk[j]["zh"] = zt
-                    if zs:
-                        chunk[j]["zh_summary"] = zs
-                        done += 1
-            print(f"  [AI] 批 {start // batch + 1}: 处理 {len(chunk)} 条")
-        except Exception as ex:
-            print(f"  [warn] AI 批次失败({start // batch + 1}): {ex}")
+        bnum = start // batch + 1
+        data = None
+        for attempt in range(max_retry):
+            try:
+                req = urllib.request.Request(
+                    url, data=json.dumps(body).encode("utf-8"),
+                    headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(req, timeout=90) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as ex:
+                detail = ""
+                try:
+                    detail = ex.read().decode("utf-8", "ignore")[:300]
+                except Exception:
+                    pass
+                # 429/5xx 退避重试；其它错误（400/403 等）直接放弃，重试也没用
+                if ex.code in (429, 500, 503) and attempt < max_retry - 1:
+                    wait = 8 * (2 ** attempt)
+                    print(f"  [AI] 批 {bnum} 第{attempt + 1}次 {ex.code}，{wait}s 后重试 {detail}")
+                    time.sleep(wait)
+                    continue
+                print(f"  [warn] AI 批次失败({bnum}): HTTP {ex.code} {detail}")
+                break
+            except Exception as ex:
+                print(f"  [warn] AI 批次失败({bnum}): {ex}")
+                break
+        if data is not None:
+            try:
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                for el in json.loads(text):
+                    j = el.get("i")
+                    if isinstance(j, int) and 0 <= j < len(chunk):
+                        zt = (el.get("zh_title") or "").strip()
+                        zs = (el.get("zh_summary") or "").strip()
+                        if zt:
+                            chunk[j]["zh"] = zt
+                        if zs:
+                            chunk[j]["zh_summary"] = zs
+                            done += 1
+                print(f"  [AI] 批 {bnum}: 处理 {len(chunk)} 条")
+            except Exception as ex:
+                print(f"  [warn] AI 解析失败({bnum}): {ex}")
         if start + batch < len(items):
             time.sleep(sleep_s)
     print(f"  [AI] 完成，生成中文摘要 {done} 条")

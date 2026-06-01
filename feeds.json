@@ -85,7 +85,8 @@
     "translate_en_titles": true,
     "timezone": "America/Toronto",
     "ai_model": "gemini-2.0-flash",
-    "ai_batch": 15,
-    "ai_sleep": 4
+    "ai_batch": 30,
+    "ai_sleep": 4,
+    "ai_retry": 4
   }
 }

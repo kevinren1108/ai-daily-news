@@ -12,8 +12,7 @@ import json
 import html
 import time
 import hashlib
-import urllib.request
-import urllib.error
+import subprocess
 import datetime as dt
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -28,6 +27,23 @@ except Exception:
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(HERE, "dist")
+DATA = os.path.join(HERE, "data")
+STORE = os.path.join(DATA, "store.json")   # 跨次运行的滚动存档（48h），含翻译缓存
+
+
+def load_store():
+    try:
+        with open(STORE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data.get("items", []) if isinstance(data, dict) else []
+    except Exception:
+        return []
+
+
+def save_store(items):
+    os.makedirs(DATA, exist_ok=True)
+    with open(STORE, "w", encoding="utf-8") as f:
+        json.dump({"items": items, "updated": int(time.time())}, f, ensure_ascii=False)
 
 
 def load_config():
@@ -115,90 +131,81 @@ def translate_texts(texts):
     return result
 
 
+SYS_PROMPT = (
+    "你是专业的中文新闻编辑。下面给你若干条英文新闻，每条含标题(title)和摘要(summary)。\n"
+    "为每条生成：\n"
+    "1) zh_title：把标题翻成通顺、准确、像中文新闻标题的中文（不超过40字）。\n"
+    "2) zh_summary：用2-3句通顺中文概括新闻要点，突出关键事实(人物/数字/结论)，"
+    "客观陈述、不要编造、不加评论；若 summary 为空则根据标题写一句话概括。\n"
+    "只输出一个 JSON 数组，每个元素形如 "
+    "{\"i\":序号,\"zh_title\":\"...\",\"zh_summary\":\"...\"}，不要任何额外文字、不要 markdown 代码块。\n\n"
+    "新闻列表：\n"
+)
+
+
+def _claude_json(prompt, model, timeout):
+    """调用 claude -p（无头模式），返回模型最终文本。失败抛异常。"""
+    cmd = ["claude", "-p", prompt, "--output-format", "json", "--max-turns", "1"]
+    if model:
+        cmd += ["--model", model]
+    env = dict(os.environ)
+    # ANTHROPIC_API_KEY 优先级高于 OAuth token，若误设会抢占订阅登录，这里清掉
+    env.pop("ANTHROPIC_API_KEY", None)
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=env)
+    if proc.returncode != 0:
+        raise RuntimeError(f"claude exit {proc.returncode}: {(proc.stderr or '')[:200]}")
+    envelope = json.loads(proc.stdout)
+    if envelope.get("is_error"):
+        raise RuntimeError(f"claude error: {str(envelope.get('result'))[:200]}")
+    return envelope.get("result", "")
+
+
+def _extract_array(text):
+    """从模型输出里抠出 JSON 数组（容忍 ```json 包裹和前后多余文字）。"""
+    t = (text or "").strip()
+    if t.startswith("```"):
+        t = t.strip("`")
+        if t[:4].lower() == "json":
+            t = t[4:]
+    i, j = t.find("["), t.rfind("]")
+    if i != -1 and j > i:
+        t = t[i:j + 1]
+    return json.loads(t)
+
+
 def ai_summarize(items, settings):
-    """用 Gemini 给英文新闻做「翻译标题 + 中文摘要」。
-    直接写回 it['zh'] 和 it['zh_summary']；没 key / 出错的条目保持空，交给 Google 翻译兜底。
+    """用 claude -p 给英文新闻做「翻译标题 + 中文摘要」。
+    直接写回 it['zh'] 和 it['zh_summary']；出错的条目保持空，交给 Google 翻译兜底。
     """
-    key = os.environ.get("GEMINI_API_KEY", "").strip()
-    if not key or not items:
-        if not key:
-            print("  [AI] 未配置 GEMINI_API_KEY，跳过 AI，使用免费翻译兜底")
+    if not items:
         return
-    model = os.environ.get("GEMINI_MODEL") or settings.get("ai_model", "gemini-2.0-flash")
-    batch = int(settings.get("ai_batch", 30))      # 批越大请求越少，越不容易撞限流
-    sleep_s = float(settings.get("ai_sleep", 4))   # 免费档约 15 RPM，批间稍歇避免限流
-    max_retry = int(settings.get("ai_retry", 4))   # 429 时指数退避重试
-    url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-           f"{model}:generateContent?key={key}")
-    sys_prompt = (
-        "你是专业的中文新闻编辑。下面给你若干条英文新闻，每条含标题(title)和摘要(summary)。\n"
-        "为每条生成：\n"
-        "1) zh_title：把标题翻成通顺、准确、像中文新闻标题的中文（不超过40字）。\n"
-        "2) zh_summary：用2-3句通顺中文概括新闻要点，突出关键事实(人物/数字/结论)，"
-        "客观陈述、不要编造、不加评论；若 summary 为空则根据标题写一句话概括。\n"
-        "严格只输出一个 JSON 数组，每个元素形如 "
-        "{\"i\":序号,\"zh_title\":\"...\",\"zh_summary\":\"...\"}，不要任何额外文字。\n\n"
-        "新闻列表：\n"
-    )
+    if not (os.environ.get("CLAUDE_CODE_OAUTH_TOKEN") or os.environ.get("ANTHROPIC_API_KEY")):
+        print("  [AI] 未配置 CLAUDE_CODE_OAUTH_TOKEN，跳过 AI，使用免费翻译兜底")
+        return
+    model = os.environ.get("AI_MODEL") or settings.get("ai_model", "claude-haiku-4-5-20251001")
+    batch = int(settings.get("ai_batch", 25))
+    timeout = int(settings.get("ai_timeout", 240))
     done = 0
     for start in range(0, len(items), batch):
         chunk = items[start:start + batch]
+        bnum = start // batch + 1
         payload = [{"i": idx, "title": it["title"], "summary": it.get("summary", "")}
                    for idx, it in enumerate(chunk)]
-        body = {
-            "contents": [{"parts": [{"text": sys_prompt + json.dumps(payload, ensure_ascii=False)}]}],
-            "generationConfig": {
-                "temperature": 0.3,
-                "responseMimeType": "application/json",
-                # 翻译/总结不需要推理，关掉 thinking 省钱提速
-                "thinkingConfig": {"thinkingBudget": int(settings.get("ai_thinking_budget", 0))},
-            },
-        }
-        bnum = start // batch + 1
-        data = None
-        for attempt in range(max_retry):
-            try:
-                req = urllib.request.Request(
-                    url, data=json.dumps(body).encode("utf-8"),
-                    headers={"Content-Type": "application/json"}, method="POST")
-                with urllib.request.urlopen(req, timeout=90) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                break
-            except urllib.error.HTTPError as ex:
-                detail = ""
-                try:
-                    detail = ex.read().decode("utf-8", "ignore")[:300]
-                except Exception:
-                    pass
-                # 429/5xx 退避重试；其它错误（400/403 等）直接放弃，重试也没用
-                if ex.code in (429, 500, 503) and attempt < max_retry - 1:
-                    wait = 8 * (2 ** attempt)
-                    print(f"  [AI] 批 {bnum} 第{attempt + 1}次 {ex.code}，{wait}s 后重试 {detail}")
-                    time.sleep(wait)
-                    continue
-                print(f"  [warn] AI 批次失败({bnum}): HTTP {ex.code} {detail}")
-                break
-            except Exception as ex:
-                print(f"  [warn] AI 批次失败({bnum}): {ex}")
-                break
-        if data is not None:
-            try:
-                text = data["candidates"][0]["content"]["parts"][0]["text"]
-                for el in json.loads(text):
-                    j = el.get("i")
-                    if isinstance(j, int) and 0 <= j < len(chunk):
-                        zt = (el.get("zh_title") or "").strip()
-                        zs = (el.get("zh_summary") or "").strip()
-                        if zt:
-                            chunk[j]["zh"] = zt
-                        if zs:
-                            chunk[j]["zh_summary"] = zs
-                            done += 1
-                print(f"  [AI] 批 {bnum}: 处理 {len(chunk)} 条")
-            except Exception as ex:
-                print(f"  [warn] AI 解析失败({bnum}): {ex}")
-        if start + batch < len(items):
-            time.sleep(sleep_s)
+        try:
+            text = _claude_json(SYS_PROMPT + json.dumps(payload, ensure_ascii=False), model, timeout)
+            for el in _extract_array(text):
+                j = el.get("i")
+                if isinstance(j, int) and 0 <= j < len(chunk):
+                    zt = (el.get("zh_title") or "").strip()
+                    zs = (el.get("zh_summary") or "").strip()
+                    if zt:
+                        chunk[j]["zh"] = zt
+                    if zs:
+                        chunk[j]["zh_summary"] = zs
+                        done += 1
+            print(f"  [AI] 批 {bnum}: 处理 {len(chunk)} 条")
+        except Exception as ex:
+            print(f"  [warn] AI 批次失败({bnum}): {ex}")
     print(f"  [AI] 完成，生成中文摘要 {done} 条")
 
 
@@ -208,63 +215,73 @@ def build():
     max_feed = settings.get("max_per_feed", 8)
     max_cat = settings.get("max_per_category", 20)
     do_translate = settings.get("translate_en_titles", True)
+    window = int(settings.get("window_hours", 48)) * 3600   # 滚动保留窗口
+    now = time.time()
 
-    categories_out = []
-
+    # 1) 抓取当前所有源（给每条打上分类 id）
+    fetched = []
     for cat in cfg["categories"]:
         print(f"[分类] {cat['name']}")
-        collected = []
         with ThreadPoolExecutor(max_workers=6) as ex:
             futs = {ex.submit(fetch_feed, f): f for f in cat["feeds"]}
-            per_feed = {}
             for fut in as_completed(futs):
                 f = futs[fut]
                 items = fut.result()
-                # 每个源按时间排序后取前 N
                 items.sort(key=lambda x: x["ts"], reverse=True)
-                per_feed[f["name"]] = items[:max_feed]
-                print(f"  {f['name']}: {len(items)} 条 -> 取 {len(per_feed[f['name']])} 条")
-            for items in per_feed.values():
-                collected.extend(items)
+                top = items[:max_feed]
+                print(f"  {f['name']}: {len(items)} 条 -> 取 {len(top)} 条")
+                for it in top:
+                    it["cat_id"] = cat["id"]
+                    fetched.append(it)
 
-        # 去重（按 link）
-        seen, deduped = set(), []
-        for it in collected:
-            key = it["link"]
-            if key in seen:
-                continue
-            seen.add(key)
-            deduped.append(it)
+    # 2) 合并进滚动存档：按 link 去重，复用已有的「首次见到时间 + 翻译缓存」
+    by_link = {it["link"]: it for it in load_store()}
+    for it in fetched:
+        old = by_link.get(it["link"])
+        if old:
+            it["first_seen"] = old.get("first_seen", now)
+            it["zh"] = old.get("zh", "")
+            it["zh_summary"] = old.get("zh_summary", "")
+        else:
+            it["first_seen"] = now
+            it.setdefault("zh", "")
+            it.setdefault("zh_summary", "")
+        by_link[it["link"]] = it
 
-        deduped.sort(key=lambda x: x["ts"], reverse=True)
-        deduped = deduped[:max_cat]
-        categories_out.append({"meta": cat, "items": deduped})
+    # 3) 滚动窗口：丢弃首次见到超过 window 的（默认 48h）
+    items_all = [it for it in by_link.values() if (now - it.get("first_seen", now)) <= window]
 
-    # 中文源：标题原样，摘要本身就是中文，直接显示
-    for cat in categories_out:
-        for it in cat["items"]:
-            if it["lang"] != "en":
-                it["zh"] = ""
-                it["zh_summary"] = it.get("summary", "")
+    # 4) 中文源摘要直接用原文；找出需要翻译的「新」英文条目（zh 还空着的）
+    for it in items_all:
+        if it.get("lang") != "en":
+            it["zh"] = ""
+            it["zh_summary"] = it.get("zh_summary") or it.get("summary", "")
+    pending = [it for it in items_all if it.get("lang") == "en" and not it.get("zh")]
+    print(f"[增量] 窗口内 {len(items_all)} 条，新英文待翻 {len(pending)} 条")
 
-    # 英文源：先用 AI（Gemini）翻译标题 + 浓缩中文摘要
-    en_items = [it for cat in categories_out for it in cat["items"] if it["lang"] == "en"]
-    for it in en_items:
-        it.setdefault("zh", "")
-        it.setdefault("zh_summary", "")
-    if do_translate:
-        ai_summarize(en_items, settings)
-        # AI 没覆盖到的（无 key / 限流 / 失败）回退到免费 Google 翻译，保证不空
-        pending = [it for it in en_items if not it["zh"]]
-        if pending:
-            texts = [it["title"] for it in pending]
-            texts += [it["summary"] for it in pending if it.get("summary")]
+    # 5) 只翻新增（claude -p）；失败的用免费 Google 兜底，保证不空
+    if do_translate and pending:
+        ai_summarize(pending, settings)
+        still = [it for it in pending if not it.get("zh")]
+        if still:
+            texts = [it["title"] for it in still]
+            texts += [it["summary"] for it in still if it.get("summary")]
             gmap = translate_texts(texts)
-            for it in pending:
+            for it in still:
                 it["zh"] = gmap.get(it["title"], "")
-                if it.get("summary") and not it["zh_summary"]:
+                if it.get("summary") and not it.get("zh_summary"):
                     it["zh_summary"] = gmap.get(it["summary"], "")
-            print(f"[翻译] Google 兜底 {len(pending)} 条")
+            print(f"[翻译] Google 兜底 {len(still)} 条")
+
+    # 6) 存回滚动存档（含翻译缓存，下次不重复翻）
+    save_store(items_all)
+
+    # 7) 按分类分组渲染：组内按时间倒序，取前 max_cat
+    categories_out = []
+    for cat in cfg["categories"]:
+        its = [it for it in items_all if it.get("cat_id") == cat["id"]]
+        its.sort(key=lambda x: (x.get("ts") or x.get("first_seen") or 0), reverse=True)
+        categories_out.append({"meta": cat, "items": its[:max_cat]})
 
     render(categories_out, settings)
 

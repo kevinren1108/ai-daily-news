@@ -2,8 +2,8 @@ name: Daily News
 
 on:
   schedule:
-    # UTC 22:00 = 北京时间次日 06:00。GitHub 定时有几分钟~几十分钟延迟，属正常。
-    - cron: "0 22 * * *"
+    # 每 6 小时一次（一天 4 次）：UTC 0/6/12/18 点。GitHub 定时有几分钟~几十分钟延迟，属正常。
+    - cron: "0 */6 * * *"
   workflow_dispatch: {}   # 允许在 Actions 页面手动点一下立即跑
 
 permissions:
@@ -28,13 +28,38 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Install deps
         run: pip install feedparser deep-translator
+
+      # 跨次运行保留滚动存档（48h 窗口 + 翻译缓存）。restore-keys 取最近一次。
+      - name: Restore rolling store
+        uses: actions/cache/restore@v4
+        with:
+          path: data/store.json
+          key: store-${{ github.run_id }}
+          restore-keys: |
+            store-
 
       - name: Build site
         run: python build.py
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # 用 Max 订阅的长期 OAuth token（claude setup-token 生成）。不要设 ANTHROPIC_API_KEY，否则会抢占。
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+      - name: Save rolling store
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/store.json
+          key: store-${{ github.run_id }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
